@@ -44,6 +44,7 @@ router.post('/join', isNotLoggedIn, async (req, res, next) => {
             id: newUser.id,
             // email: newUser.email,
             name: newUser.name,
+            role: newUser.role,
          },
       })
    } catch (error) {
@@ -89,6 +90,7 @@ router.post('/login', isNotLoggedIn, async (req, res, next) => {
                id: user.id,
                // email: user.email,
                name: user.name,
+               role: user.role,
             },
          })
       })

@@ -29,3 +29,27 @@ exports.isNotLoggedIn = (req, res, next) => {
       })
    }
 }
+
+// 관리자 권한 확인 미들웨어
+exports.isAdmin = (req, res, next) => {
+   // 로그인 상태 확인
+   if (req.isAuthenticated()) {
+      // 사용자 권한 확인
+      if (req.user && req.user.role === 'ADMIN') {
+         // ADMIN 권한이 있으면 다음 미들웨어로 이동
+         return next()
+      } else {
+         // 권한 부족
+         return res.status(403).json({
+            success: false,
+            message: '관리자 권한이 필요합니다.',
+         })
+      }
+   } else {
+      // 로그인되지 않은 경우
+      return res.status(403).json({
+         success: false,
+         message: '로그인이 필요합니다.',
+      })
+   }
+}

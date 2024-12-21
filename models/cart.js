@@ -18,6 +18,7 @@ module.exports = class Cart extends Sequelize.Model {
    }
 
    static associate(db) {
-      Cart.belongsTo(db.User, { foreignKey: 'userId', targetKey: 'id' })
+      Cart.belongsTo(db.User, { foreignKey: 'userId', targetKey: 'id', onDelete: 'CASCADE' })
+      Cart.belongsToMany(db.Item, { through: db.CartItem, foreignKey: 'cartId', otherKey: 'itemId' }) // 교차테이블 관계 설정
    }
 }
