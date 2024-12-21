@@ -8,14 +8,7 @@ const router = express.Router()
 
 //회원가입 localhost:8000/auth/join
 router.post('/join', isNotLoggedIn, async (req, res, next) => {
-   /*
-    {
-        email: 'test@test.com',
-        nick: '김하서',
-        password: 11111
-    }
-    */
-   const { email, nick, password } = req.body
+   const { email, name, address, password } = req.body
    try {
       //이메일로 기존 사용자 검색
       // select * from users where email = ?
@@ -37,8 +30,10 @@ router.post('/join', isNotLoggedIn, async (req, res, next) => {
       //새로운 사용자 생성
       const newUser = await User.create({
          email,
-         nick,
+         name,
          password: hash,
+         role: 'USER',
+         address,
       })
 
       // 성공 응답 반환
@@ -47,8 +42,8 @@ router.post('/join', isNotLoggedIn, async (req, res, next) => {
          message: '사용자가 성공적으로 등록되었습니다.',
          user: {
             id: newUser.id,
-            email: newUser.email,
-            nick: newUser.nick,
+            // email: newUser.email,
+            name: newUser.name,
          },
       })
    } catch (error) {
@@ -92,7 +87,8 @@ router.post('/login', isNotLoggedIn, async (req, res, next) => {
             message: '로그인 성공',
             user: {
                id: user.id,
-               nick: user.nick,
+               // email: user.email,
+               name: user.name,
             },
          })
       })
@@ -132,7 +128,10 @@ router.get('/status', async (req, res, next) => {
          isAuthenticated: true,
          user: {
             id: req.user.id,
-            nick: req.user.nick,
+            // email: req.user.email,
+            name: req.user.name,
+            role: req.user.role,
+            // address: req.user.address,
          },
       })
    } else {
