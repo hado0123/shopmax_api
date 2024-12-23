@@ -2,6 +2,7 @@ const express = require('express')
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
+const { Op } = require('sequelize')
 const { Item, Img } = require('../models')
 const { isAdmin } = require('./middlewares')
 const router = express.Router()
@@ -218,7 +219,11 @@ router.get('/', async (req, res) => {
          }),
       }
 
-      const { rows: items, count } = await Item.findAndCountAll({
+      const count = await Item.count({
+         where: whereClause,
+      })
+
+      const items = await Item.findAll({
          where: whereClause,
          limit,
          offset,
@@ -251,49 +256,5 @@ router.get('/', async (req, res) => {
       })
    }
 })
-
-// router.get('/', async (req, res) => {
-//    try {
-//       // 요청으로부터 page와 limit 값을 가져오기 (기본값 설정)
-//       const page = parseInt(req.query.page, 10) || 1 // 기본 페이지: 1
-//       const limit = parseInt(req.query.limit, 10) || 10 // 기본 한 페이지에 표시할 항목 수: 10
-//       const offset = (page - 1) * limit // 시작 위치 계산
-
-//       const count = await Item.count()
-
-//       // 상품과 연관된 이미지 포함하여 페이징 처리
-//       const items = await Item.findAll({
-//          limit, // 한 번에 가져올 상품 수
-//          offset, // 시작 위치
-//          order: [['createdAt', 'DESC']], // 최신 상품이 먼저 나오도록 정렬
-//          include: [
-//             {
-//                model: Img,
-//                attributes: ['id', 'oriImgName', 'imgUrl', 'repImgYn'], // 이미지 속성 선택
-//             },
-//          ],
-//       })
-
-//       // 응답 데이터 생성
-//       res.status(200).json({
-//          success: true,
-//          message: '상품 목록 조회 성공',
-//          items,
-//          pagination: {
-//             totalItems: count, // 총 상품 수
-//             totalPages: Math.ceil(count / limit), // 총 페이지 수
-//             currentPage: page, // 현재 페이지
-//             limit, // 페이지당 상품 수
-//          },
-//       })
-//    } catch (error) {
-//       console.error(error)
-//       res.status(500).json({
-//          success: false,
-//          message: '상품 목록 조회 중 오류가 발생했습니다.',
-//          error,
-//       })
-//    }
-// })
 
 module.exports = router
