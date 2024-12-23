@@ -83,7 +83,7 @@ router.post('/', isAdmin, upload.array('img'), async (req, res) => {
 })
 
 //상품 수정 localhost:8000/item/:id
-router.put('/:id', isAdmin, upload.array('many'), async (req, res) => {
+router.put('/:id', isAdmin, upload.array('img'), async (req, res) => {
    try {
       const { id } = req.params
       const { itemNm, price, stockNumber, itemDetail, itemSellStatus } = req.body
