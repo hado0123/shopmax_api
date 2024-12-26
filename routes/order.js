@@ -85,12 +85,33 @@ router.get('/list', isLoggedIn, async (req, res) => {
       const page = parseInt(req.query.page, 10) || 1
       const limit = parseInt(req.query.limit, 10) || 5
       const offset = (page - 1) * limit
+      const startDate = req.query.startDate
+      const endDate = req.query.endDate
 
-      const count = await Order.count({ where: { userId: req.user.id } })
+      // const count = await Order.count({ where: { userId: req.user.id } })
+
+      // // 로그인한 사람의 주문 상품 목록 가져오기
+      // const orderItems = await Order.findAll({
+      //    where: { userId: req.user.id },
+      //    limit: parseInt(limit),
+      //    offset: parseInt(offset),
+      //    include: [
+      //       {
+      //          model: OrderItem,
+      //          attributes: ['itemId', 'orderPrice', 'count'],
+      //       },
+      //    ],
+      //    order: [['orderDate', 'DESC']],
+      // })
+
+      const count = await Order.count({ where: { userId: req.user.id, ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDate] } } : {}) } })
 
       // 로그인한 사람의 주문 상품 목록 가져오기
       const orderItems = await Order.findAll({
-         where: { userId: req.user.id },
+         where: {
+            userId: req.user.id,
+            ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDate] } } : {}),
+         },
          limit: parseInt(limit),
          offset: parseInt(offset),
          include: [
