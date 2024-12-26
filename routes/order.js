@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { sequelize } = require('../models')
-const { Order, Item, User, OrderItem } = require('../models')
+const { Order, Item, User, OrderItem, Img } = require('../models')
 const { isLoggedIn } = require('./middlewares')
 
 //주문 localhost:8000/order
@@ -81,71 +81,99 @@ router.post('/', isLoggedIn, async (req, res) => {
 
 // 주문 목록(페이징) localhost:8000/order/list
 router.get('/list', isLoggedIn, async (req, res) => {
-   const { page = 1, limit = 10 } = req.query // 페이지와 제한 개수 기본값 설정
-
    try {
+      const page = parseInt(req.query.page, 10) || 1
+      const limit = parseInt(req.query.limit, 10) || 5
       const offset = (page - 1) * limit
 
-      const orders = await Order.findAndCountAll({
+      const count = await Order.count({ where: { userId: req.user.id } })
+
+      // 로그인한 사람의 주문 상품 목록 가져오기
+      const orderItems = await Order.findAll({
+         where: { userId: req.user.id },
          limit: parseInt(limit),
          offset: parseInt(offset),
          include: [
             {
-               model: User,
-               attributes: ['id', 'name', 'email'],
-            },
-            {
                model: OrderItem,
-               include: [
-                  {
-                     model: Item,
-                     attributes: ['id', 'itemNm', 'price'],
-                  },
-               ],
+               attributes: ['itemId', 'orderPrice', 'count'],
             },
          ],
          order: [['orderDate', 'DESC']],
       })
 
+      // OrderItem의 itemId를 배열로 추출
+      const itemIds = orderItems.flatMap((order) => order.OrderItems.map((orderItem) => orderItem.itemId))
+
+      // Item에서 해당 Item들의 데이터를 필터링
+      const items = await Item.findAll({
+         where: { id: itemIds },
+         attributes: ['id', 'itemNm', 'price'], // 필요한 데이터만 선택
+         include: [
+            {
+               model: Img,
+               attributes: ['imgUrl'],
+               where: { repImgYn: 'Y' },
+            },
+         ],
+      })
+
+      // OrderItems와 Items 데이터를 조합
+      const orders = orderItems.map((order) => {
+         const detailedOrderItems = order.OrderItems.map((orderItem) => {
+            const itemDetail = items.find((item) => item.id === orderItem.itemId)
+            return itemDetail
+         })
+         return {
+            ...order.dataValues,
+            Items: detailedOrderItems,
+         }
+      })
+
       res.status(200).json({
-         totalOrders: orders.count,
-         totalPages: Math.ceil(orders.count / limit),
-         currentPage: parseInt(page),
-         orders: orders.rows,
+         success: true,
+         message: '주문 목록 조회 성공',
+         orders,
+         pagination: {
+            totalOrders: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            limit,
+         },
       })
    } catch (error) {
       console.error(error)
-      res.status(500).json({ error: '서버 오류가 발생했습니다.' })
+      res.status(500).json({ error: '주문 내역 조회 중 발생했습니다.' })
    }
 })
 
 // 주문 취소 localhost:8000/order/cancel/:id
 router.post('/cancel/:id', isLoggedIn, async (req, res) => {
-   const { orderId } = req.body
+   const { id } = req.params
 
    try {
       // 주문 확인
-      const order = await Order.findByPk(orderId, {
-         include: [{ model: OrderItem, include: [Item] }],
+      const order = await Order.findByPk(id, {
+         include: [{ model: OrderItem, include: [{ model: Item }] }],
       })
 
       if (!order) {
          return res.status(404).json({ error: '주문이 존재하지 않습니다.' })
       }
 
-      if (order.orderState === 'CANCEL') {
+      if (order.orderStatus === 'CANCEL') {
          return res.status(400).json({ error: '이미 취소된 주문입니다.' })
       }
 
       // 재고 복구
-      for (const orderItem of order.OrderItem) {
+      for (const orderItem of order.OrderItems) {
          const product = orderItem.Item
          product.stockNumber += orderItem.count
          await product.save()
       }
 
       // 주문 상태 변경
-      order.orderState = 'CANCEL'
+      order.orderStatus = 'CANCEL'
       await order.save()
 
       res.status(200).json({ message: '주문이 성공적으로 취소되었습니다.' })
@@ -157,11 +185,11 @@ router.post('/cancel/:id', isLoggedIn, async (req, res) => {
 
 // 주문 삭제 localhost:8000/order/delete/:id
 router.delete('/delete/:id', isLoggedIn, async (req, res) => {
-   const { orderId } = req.body
+   const { id } = req.params
 
    try {
       // 주문 확인
-      const order = await Order.findByPk(orderId, {
+      const order = await Order.findByPk(id, {
          include: [{ model: OrderItem }],
       })
 
