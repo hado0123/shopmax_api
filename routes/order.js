@@ -3,6 +3,7 @@ const router = express.Router()
 const { sequelize } = require('../models')
 const { Order, Item, User, OrderItem, Img } = require('../models')
 const { isLoggedIn } = require('./middlewares')
+const { Op } = require('sequelize')
 
 //주문 localhost:8000/order
 router.post('/', isLoggedIn, async (req, res) => {
@@ -87,6 +88,7 @@ router.get('/list', isLoggedIn, async (req, res) => {
       const offset = (page - 1) * limit
       const startDate = req.query.startDate
       const endDate = req.query.endDate
+      const endDateTime = `${endDate} 23:59:59`
 
       // const count = await Order.count({ where: { userId: req.user.id } })
 
@@ -104,13 +106,13 @@ router.get('/list', isLoggedIn, async (req, res) => {
       //    order: [['orderDate', 'DESC']],
       // })
 
-      const count = await Order.count({ where: { userId: req.user.id, ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDate] } } : {}) } })
+      const count = await Order.count({ where: { userId: req.user.id, ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDateTime] } } : {}) } })
 
       // 로그인한 사람의 주문 상품 목록 가져오기
       const orderItems = await Order.findAll({
          where: {
             userId: req.user.id,
-            ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDate] } } : {}),
+            ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDateTime] } } : {}),
          },
          limit: parseInt(limit),
          offset: parseInt(offset),
