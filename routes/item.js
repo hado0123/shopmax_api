@@ -125,7 +125,7 @@ router.put('/:id', isAdmin, upload.array('img'), async (req, res) => {
          await Img.bulkCreate(images)
       }
 
-      res.status(200).json({
+      res.json({
          success: true,
          message: '상품과 이미지가 성공적으로 수정되었습니다.',
       })
@@ -149,7 +149,7 @@ router.delete('/:id', isAdmin, async (req, res) => {
       // 상품 삭제 (연관된 이미지도 삭제됨 - CASCADE 설정)
       await item.destroy()
 
-      res.status(200).json({
+      res.json({
          success: true,
          message: '상품과 관련 이미지가 성공적으로 삭제되었습니다.',
       })
@@ -182,7 +182,7 @@ router.get('/:id', async (req, res) => {
          })
       }
 
-      res.status(200).json({
+      res.json({
          success: true,
          message: '상품 조회 성공',
          item,
@@ -236,7 +236,7 @@ router.get('/', async (req, res) => {
          ],
       })
 
-      res.status(200).json({
+      res.json({
          success: true,
          message: '상품 목록 조회 성공',
          items,
