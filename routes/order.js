@@ -2,11 +2,11 @@ const express = require('express')
 const router = express.Router()
 const { sequelize } = require('../models')
 const { Order, Item, User, OrderItem, Img } = require('../models')
-const { isLoggedIn } = require('./middlewares')
+const { isLoggedIn, verifyToken } = require('./middlewares')
 const { Op } = require('sequelize')
 
 //주문 localhost:8000/order
-router.post('/', isLoggedIn, async (req, res) => {
+router.post('/', verifyToken, isLoggedIn, async (req, res) => {
    const { items } = req.body
    // items: [{ itemId: 1, count: 2 }, { itemId: 2, count: 1 }]
 
@@ -81,7 +81,7 @@ router.post('/', isLoggedIn, async (req, res) => {
 })
 
 // 주문 목록(페이징) localhost:8000/order/list
-router.get('/list', isLoggedIn, async (req, res) => {
+router.get('/list', verifyToken, isLoggedIn, async (req, res) => {
    try {
       const page = parseInt(req.query.page, 10) || 1
       const limit = parseInt(req.query.limit, 10) || 5
@@ -171,7 +171,7 @@ router.get('/list', isLoggedIn, async (req, res) => {
 })
 
 // 주문 취소 localhost:8000/order/cancel/:id
-router.post('/cancel/:id', isLoggedIn, async (req, res) => {
+router.post('/cancel/:id', verifyToken, isLoggedIn, async (req, res) => {
    const { id } = req.params
 
    try {
@@ -207,7 +207,7 @@ router.post('/cancel/:id', isLoggedIn, async (req, res) => {
 })
 
 // 주문 삭제 localhost:8000/order/delete/:id
-router.delete('/delete/:id', isLoggedIn, async (req, res) => {
+router.delete('/delete/:id', verifyToken, isLoggedIn, async (req, res) => {
    const { id } = req.params
 
    try {

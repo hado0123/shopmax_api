@@ -1,50 +1,19 @@
 const express = require('express')
 const router = express.Router()
 const jwt = require('jsonwebtoken')
-// const cors = require('cors')
 // const url = require('url')
+const { Domain } = require('../models')
 
-// const { verifyToken, apiLimiter } = require('./middlewares')
 const { verifyToken, isLoggedIn } = require('./middlewares')
-const { Domain, User } = require('../models')
-
-// 등록된 domain만 cors 허용
-// router.use(async (req, res, next) => {
-//    console.log('cors 시작!')
-//    const domain = await Domain.findOne({
-//       where: { host: url.parse(req.get('origin')).host },
-//    })
-//    if (domain) {
-//       cors({
-//          origin: req.get('origin'),
-//          credentials: true,
-//       })(req, res, next)
-//    } else {
-//       next()
-//    }
-// })
 
 // 토큰 발급 localhost:3000/token/get
 router.get('/get', isLoggedIn, async (req, res) => {
-   // const { clientSecret } = req.body
    try {
-      const domain = await Domain.findOne({
-         where: { userId: req.user.id },
-         include: {
-            model: User,
-            attribute: ['email', 'id'],
-         },
-      })
-      if (!domain) {
-         return res.status(401).json({
-            code: 401,
-            message: '등록되지 않은 도메인입니다. 먼저 도메인을 등록하세요',
-         })
-      }
+      const origin = req.get('origin')
       const token = jwt.sign(
          {
-            id: domain.User.id,
-            email: domain.User.email,
+            id: req.user.id,
+            email: req.user.email,
          },
          process.env.JWT_SECRET,
          {
@@ -52,16 +21,56 @@ router.get('/get', isLoggedIn, async (req, res) => {
             issuer: 'shopmaxadmin',
          }
       )
+
+      await Domain.create({
+         userId: req.user.id,
+         host: origin,
+         clientToken: token,
+      })
+
       return res.json({
          success: true,
-         message: '토큰이 발급되었습니다',
+         message: 'API Key가 발급되었습니다',
          token,
       })
    } catch (error) {
       console.error(error)
       return res.status(500).json({
          success: false,
-         message: '서버 에러',
+         message: 'API Key 발급 중 에러가 발생했습니다.',
+      })
+   }
+})
+
+// 저장된 토큰 가져오기 localhost:3000/token/read
+router.get('/read', isLoggedIn, async (req, res) => {
+   try {
+      const origin = req.get('origin') // 요청 도메인 가져오기
+      const userId = req.user.id // 사용자 ID 가져오기
+
+      // 데이터베이스에서 토큰 조회
+      const domainData = await Domain.findOne({
+         where: { userId, host: origin },
+      })
+
+      // 토큰이 없으면 에러 반환
+      if (!domainData) {
+         return res.status(404).json({
+            success: false,
+            message: 'API Key를 찾을 수 없습니다.',
+         })
+      }
+
+      return res.json({
+         success: true,
+         message: 'API Key를 가져왔습니다.',
+         token: domainData.clientToken,
+      })
+   } catch (error) {
+      console.error(error)
+      return res.status(500).json({
+         success: false,
+         message: 'API Key를 가져오는 중 에러가 발생했습니다.',
       })
    }
 })
@@ -70,44 +79,4 @@ router.get('/test', verifyToken, (req, res) => {
    res.json(req.decoded)
 })
 
-// router.post('/token', apiLimiter, async (req, res) => {
-//    const { clientSecret } = req.body
-//    try {
-//       const domain = await Domain.findOne({
-//          where: { clientSecret },
-//          include: {
-//             model: User,
-//             attribute: ['nick', 'id'],
-//          },
-//       })
-//       if (!domain) {
-//          return res.status(401).json({
-//             code: 401,
-//             message: '등록되지 않은 도메인입니다. 먼저 도메인을 등록하세요',
-//          })
-//       }
-//       const token = jwt.sign(
-//          {
-//             id: domain.User.id,
-//             nick: domain.User.nick,
-//          },
-//          process.env.JWT_SECRET,
-//          {
-//             expiresIn: '30m', // 30분
-//             issuer: 'nodebird',
-//          }
-//       )
-//       return res.json({
-//          success: true,
-//          message: '토큰이 발급되었습니다',
-//          token,
-//       })
-//    } catch (error) {
-//       console.error(error)
-//       return res.status(500).json({
-//          success: false,
-//          message: '서버 에러',
-//       })
-//    }
-// })
 module.exports = router

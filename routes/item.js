@@ -4,7 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const { Op } = require('sequelize')
 const { Item, Img } = require('../models')
-const { isAdmin } = require('./middlewares')
+const { isAdmin, verifyToken } = require('./middlewares')
 const router = express.Router()
 
 // uploads 폴더가 없을 경우 새로 생성
@@ -38,7 +38,7 @@ const upload = multer({
 })
 
 //상품 등록 localhost:8000/item
-router.post('/', isAdmin, upload.array('img'), async (req, res) => {
+router.post('/', verifyToken, isAdmin, upload.array('img'), async (req, res) => {
    try {
       // 업로드된 파일 확인
       if (!req.files || req.files.length === 0) {
@@ -84,7 +84,7 @@ router.post('/', isAdmin, upload.array('img'), async (req, res) => {
 })
 
 //상품 수정 localhost:8000/item/:id
-router.put('/:id', isAdmin, upload.array('img'), async (req, res) => {
+router.put('/:id', verifyToken, isAdmin, upload.array('img'), async (req, res) => {
    try {
       const { id } = req.params
       const { itemNm, price, stockNumber, itemDetail, itemSellStatus } = req.body
@@ -136,7 +136,7 @@ router.put('/:id', isAdmin, upload.array('img'), async (req, res) => {
 })
 
 //상품 삭제 localhost:8000/item/:id
-router.delete('/:id', isAdmin, async (req, res) => {
+router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
    try {
       const { id } = req.params
 
@@ -160,7 +160,7 @@ router.delete('/:id', isAdmin, async (req, res) => {
 })
 
 //특정 상품 불러오기(id로 상품 조회) localhost:8000/item/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', verifyToken, async (req, res) => {
    try {
       const { id } = req.params
 
@@ -198,7 +198,7 @@ router.get('/:id', async (req, res) => {
 })
 
 //전체 상품 불러오기(페이징 기능) localhost:8000/item?page=1&limit=3
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
    try {
       const page = parseInt(req.query.page, 10) || 1
       const limit = parseInt(req.query.limit, 10) || 5

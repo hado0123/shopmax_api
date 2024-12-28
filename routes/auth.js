@@ -1,13 +1,13 @@
 const express = require('express')
 const passport = require('passport')
 const bcrypt = require('bcrypt')
-const { isLoggedIn, isNotLoggedIn } = require('./middlewares')
+const { isLoggedIn, isNotLoggedIn, verifyToken } = require('./middlewares')
 const User = require('../models/user')
 
 const router = express.Router()
 
 //회원가입 localhost:8000/auth/join
-router.post('/join', isNotLoggedIn, async (req, res, next) => {
+router.post('/join', verifyToken, isNotLoggedIn, async (req, res, next) => {
    const { email, name, address, password } = req.body
    try {
       //이메일로 기존 사용자 검색
@@ -59,7 +59,7 @@ router.post('/join', isNotLoggedIn, async (req, res, next) => {
 })
 
 //로그인 localhost:8000/auth/login
-router.post('/login', isNotLoggedIn, async (req, res, next) => {
+router.post('/login', verifyToken, isNotLoggedIn, async (req, res, next) => {
    passport.authenticate('local', (authError, user, info) => {
       if (authError) {
          //로그인 인증 중 에러 발생시
@@ -98,7 +98,7 @@ router.post('/login', isNotLoggedIn, async (req, res, next) => {
 })
 
 //로그아웃 localhost:8000/auth/logout
-router.get('/logout', isLoggedIn, async (req, res, next) => {
+router.get('/logout', verifyToken, isLoggedIn, async (req, res, next) => {
    //사용자를 로그아웃 상태로 바꿈
    req.logout((err) => {
       if (err) {
@@ -122,7 +122,7 @@ router.get('/logout', isLoggedIn, async (req, res, next) => {
 })
 
 //로그인 상태 확인 localhost:8000/auth/status
-router.get('/status', async (req, res, next) => {
+router.get('/status', verifyToken, async (req, res, next) => {
    if (req.isAuthenticated()) {
       //로그인이 되었을때
       // req.user는 passport의 역직렬화 설정에 의해 로그인 되었을때 로그인 한 user 정보를 가져올 수 있다
