@@ -1,40 +1,56 @@
-// socket.js
 const { Server } = require('socket.io')
+const passport = require('passport')
 
-module.exports = (server) => {
-   // 간단한 챗봇 응답 로직
-   const chatbotResponses = {
-      hello: '안녕하세요! 무엇을 도와드릴까요?',
-      help: '다음 중 하나를 입력해 보세요: hello, bye, help',
-      bye: '안녕히 가세요!',
-   }
-
+module.exports = (server, sessionMiddleware) => {
    const io = new Server(server, {
       cors: {
          origin: process.env.FRONTEND_APP_URL,
          methods: ['GET', 'POST'],
+         credentials: true,
       },
    })
 
-   // 클라이언트 연결 이벤트 처리
+   // Socket.IO에서 Express 세션 미들웨어 사용
+   io.use((socket, next) => {
+      sessionMiddleware(socket.request, {}, next)
+   })
+
+   // Passport 역직렬화 호출 추가
+   io.use((socket, next) => {
+      if (socket.request.session?.passport?.user) {
+         passport.deserializeUser(socket.request.session.passport.user, (err, user) => {
+            if (err) return next(err)
+            socket.request.user = user // 역직렬화된 사용자 정보 저장
+            next()
+         })
+      } else {
+         console.log('비인증 사용자 연결 시도')
+         return socket.disconnect() // 인증되지 않은 사용자 연결 해제
+      }
+   })
+
+   // Socket.IO 이벤트 처리
    io.on('connection', (socket) => {
-      console.log('사용자 연결됨:', socket.id)
+      const user = socket.request.user // 역직렬화된 사용자 정보
 
-      // 클라이언트로부터 메시지 수신
-      socket.on('chat message', (msg) => {
-         console.log('메시지 받음:', msg)
+      console.log('사용자 연결됨:', user?.id)
 
-         // 모든 클라이언트에게 메시지 전송
-         //  io.emit('chat message', msg)
-
-         // 챗봇 응답 생성
-         const response = chatbotResponses[msg.toLowerCase()] || '죄송합니다, 이해하지 못했어요.'
-         io.emit('chat message', `챗봇: ${response}`) // 챗봇 응답 보내기
+      socket.on('user info', (msg) => {
+         if (msg) {
+            socket.emit('user info', user)
+         }
       })
 
-      // 클라이언트 연결 해제 이벤트
+      // 클라이언트로 사용자 정보 전송
+      // socket.emit('user info', user) // 클라이언트에게 사용자 정보를 전송
+
+      socket.on('chat message', (msg) => {
+         // console.log(`메시지: ${msg}, 보낸 사용자: ${user?.name}`)
+         io.emit('chat message', { user: user?.name, message: msg })
+      })
+
       socket.on('disconnect', () => {
-         console.log('사용자 연결 해제됨:', socket.id)
+         console.log('사용자 연결 해제:', user?.id)
       })
    })
 

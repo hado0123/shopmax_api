@@ -23,12 +23,6 @@ const app = express()
 passportConfig() //passport 실행
 app.set('port', process.env.PORT || 8002)
 
-// HTTP 서버 생성
-const server = http.createServer(app)
-
-// Socket.IO 초기화 및 서버와 연결
-socketIO(server)
-
 // 시퀄라이즈를 사용한 DB연결
 sequelize
    .sync({ force: false })
@@ -53,17 +47,28 @@ app.use(express.json()) // JSON 데이터 파싱
 app.use(express.urlencoded({ extended: false })) // URL-encoded 데이터 파싱
 app.use(cookieParser(process.env.COOKIE_SECRET)) //쿠키 설정
 //세션 설정
-app.use(
-   session({
-      resave: false, //세션 데이터가 변경사항이 없어도 재저장 할지 여부 -> 변경사항이 있어야 재저장
-      saveUninitialized: true, //초기화 되지 않은 세션 저장 여부 -> 초기화 되지 않은 빈 세션도 저장
-      secret: process.env.COOKIE_SECRET, //세션 암호화 키
-      cookie: {
-         httpOnly: true, //javascript로 쿠키에 접근가능한지 여부 -> true 일경우 접근 X
-         secure: false, //https를 사용할때만 쿠키 전송 여부 -> http, https 둘다 사용가능
-      },
-   })
-)
+// app.use(
+//    session({
+//       resave: false, //세션 데이터가 변경사항이 없어도 재저장 할지 여부 -> 변경사항이 있어야 재저장
+//       saveUninitialized: true, //초기화 되지 않은 세션 저장 여부 -> 초기화 되지 않은 빈 세션도 저장
+//       secret: process.env.COOKIE_SECRET, //세션 암호화 키
+//       cookie: {
+//          httpOnly: true, //javascript로 쿠키에 접근가능한지 여부 -> true 일경우 접근 X
+//          secure: false, //https를 사용할때만 쿠키 전송 여부 -> http, https 둘다 사용가능
+//       },
+//    })
+// )
+
+const sessionMiddleware = session({
+   resave: false, //세션 데이터가 변경사항이 없어도 재저장 할지 여부 -> 변경사항이 있어야 재저장
+   saveUninitialized: true, //초기화 되지 않은 세션 저장 여부 -> 초기화 되지 않은 빈 세션도 저장
+   secret: process.env.COOKIE_SECRET, //세션 암호화 키
+   cookie: {
+      httpOnly: true, //javascript로 쿠키에 접근가능한지 여부 -> true 일경우 접근 X
+      secure: false, //https를 사용할때만 쿠키 전송 여부 -> http, https 둘다 사용가능
+   },
+})
+app.use(sessionMiddleware)
 
 //Passport 초기화, 세션 연동
 app.use(passport.initialize()) //초기화
@@ -75,6 +80,12 @@ app.use('/auth', authRouter)
 app.use('/item', itemRouter)
 app.use('/order', orderRouter)
 app.use('/token', tokenRouter)
+
+// HTTP 서버 생성
+const server = http.createServer(app)
+
+// Socket.IO 초기화 및 서버와 연결
+socketIO(server, sessionMiddleware)
 
 //잘못된 라우터 경로 처리
 app.use((req, res, next) => {
