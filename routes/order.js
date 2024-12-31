@@ -106,26 +106,10 @@ router.get('/list', verifyToken, isLoggedIn, async (req, res) => {
       const endDate = req.query.endDate
       const endDateTime = `${endDate} 23:59:59` // 년월일만 받을 시 시분초는 00:00:00로 오므로 시간 변경
 
-      // const count = await Order.count({ where: { userId: req.user.id } })
-
-      // // 로그인한 사람의 주문 상품 목록 가져오기
-      // const orderItems = await Order.findAll({
-      //    where: { userId: req.user.id },
-      //    limit: parseInt(limit),
-      //    offset: parseInt(offset),
-      //    include: [
-      //       {
-      //          model: OrderItem,
-      //          attributes: ['itemId', 'orderPrice', 'count'],
-      //       },
-      //    ],
-      //    order: [['orderDate', 'DESC']],
-      // })
-
       const count = await Order.count({ where: { userId: req.user.id, ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDateTime] } } : {}) } })
 
       // 로그인한 사람의 주문 상품 목록 가져오기
-      const orderItems = await Order.findAll({
+      const orders = await Order.findAll({
          where: {
             userId: req.user.id,
             ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDateTime] } } : {}),
@@ -134,39 +118,22 @@ router.get('/list', verifyToken, isLoggedIn, async (req, res) => {
          offset: parseInt(offset),
          include: [
             {
-               model: OrderItem,
-               attributes: ['itemId', 'orderPrice', 'count'],
+               model: Item,
+               attributes: ['id', 'itemNm', 'price'], // 필요한 데이터만 선택
+               // 교차테이블 데이터
+               through: {
+                  attributes: ['count', 'orderPrice'], // OrderItem 테이블에서 필요한 컬럼 선택
+               },
+               include: [
+                  {
+                     model: Img,
+                     attributes: ['imgUrl'],
+                     where: { repImgYn: 'Y' },
+                  },
+               ],
             },
          ],
          order: [['orderDate', 'DESC']],
-      })
-
-      // OrderItem의 itemId를 배열로 추출
-      const itemIds = orderItems.flatMap((order) => order.OrderItems.map((orderItem) => orderItem.itemId))
-
-      // Item에서 해당 Item들의 데이터를 필터링
-      const items = await Item.findAll({
-         where: { id: itemIds },
-         attributes: ['id', 'itemNm', 'price'], // 필요한 데이터만 선택
-         include: [
-            {
-               model: Img,
-               attributes: ['imgUrl'],
-               where: { repImgYn: 'Y' },
-            },
-         ],
-      })
-
-      // OrderItems와 Items 데이터를 조합
-      const orders = orderItems.map((order) => {
-         const detailedOrderItems = order.OrderItems.map((orderItem) => {
-            const itemDetail = items.find((item) => item.id === orderItem.itemId)
-            return itemDetail
-         })
-         return {
-            ...order.dataValues,
-            Items: detailedOrderItems,
-         }
       })
 
       res.status(200).json({
@@ -236,10 +203,7 @@ router.delete('/delete/:id', verifyToken, isLoggedIn, async (req, res) => {
          return res.status(404).json({ error: '주문이 존재하지 않습니다.' })
       }
 
-      // 연관된 OrderItem 삭제
-      await OrderItem.destroy({ where: { orderId: order.id } })
-
-      // 주문 삭제
+      // 주문 삭제(연관된 OrderItem도 삭제됨 - CASCADE 설정)
       await Order.destroy({ where: { id: order.id } })
 
       res.status(200).json({ message: '주문이 성공적으로 삭제되었습니다.' })
