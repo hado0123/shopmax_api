@@ -10,7 +10,9 @@ router.post('/', verifyToken, isLoggedIn, async (req, res) => {
    const { items } = req.body
    // items: [{ itemId: 1, count: 2 }, { itemId: 2, count: 1 }]
 
-   //주문 처리 중 에러 발생시 차감된 재고를 복구하지 않으면 데이터가 불일치 상태가 되므로 트랜잭션 처리
+   /* ★트랜잭션 처리: 주문 처리 중 에러 발생시 차감된 재고를 복구하지 않으면 데이터가
+   불일치 상태가 되므로 트랜잭션 처리 */
+
    const transaction = await sequelize.transaction() // 트랜잭션 시작
 
    try {
@@ -32,6 +34,20 @@ router.post('/', verifyToken, isLoggedIn, async (req, res) => {
 
       let totalOrderPrice = 0
 
+      /*
+         await Promise.all(...)은 비동기 작업들을 *병렬로 실행하여 성능을 최적화하기 위해 사용. 
+         여기서는 items.map을 통해 각 item에 대해 비동기적으로 처리하고 있으며, 
+         각 비동기 작업(즉, 상품 확인, 재고 차감, 저장 등)을 병렬로 실행한 뒤 
+         모든 작업이 완료될 때까지 기다리기 위해 Promise.all이 사용됨 
+
+         *병렬 실행: 여러작업이 동시에 실행된다. 즉, 비동기 병렬 실행은: 비순차적으로 동시에 실행됨을 의미
+         
+         아래와 같이 처리하면 잘못된건 아니지만 비효율적이다.
+         for (const item of items) {
+             const product = await Item.findByPk(item.itemId, { transaction });
+             ...
+         }
+      */
       // 주문 상품 처리
       const orderItemsData = await Promise.all(
          items.map(async (item) => {
@@ -86,9 +102,9 @@ router.get('/list', verifyToken, isLoggedIn, async (req, res) => {
       const page = parseInt(req.query.page, 10) || 1
       const limit = parseInt(req.query.limit, 10) || 5
       const offset = (page - 1) * limit
-      const startDate = req.query.startDate
+      const startDate = req.query.startDate // YYYY-MM-DD 형태
       const endDate = req.query.endDate
-      const endDateTime = `${endDate} 23:59:59`
+      const endDateTime = `${endDate} 23:59:59` // 년월일만 받을 시 시분초는 00:00:00로 오므로 시간 변경
 
       // const count = await Order.count({ where: { userId: req.user.id } })
 
@@ -231,6 +247,19 @@ router.delete('/delete/:id', verifyToken, isLoggedIn, async (req, res) => {
       console.error(error)
       res.status(500).json({ error: '서버 오류가 발생했습니다.' })
    }
+})
+
+// 교차테이블 테스트
+router.get('/test', async (req, res) => {
+   const order = await Order.findOne({
+      where: { id: 9 },
+      include: [{ model: Item }], // Order와 연결된 모든 Item 가져오기
+   })
+
+   res.json({
+      success: true,
+      order,
+   })
 })
 
 module.exports = router

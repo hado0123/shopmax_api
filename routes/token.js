@@ -10,15 +10,16 @@ const { verifyToken, isLoggedIn } = require('./middlewares')
 router.get('/get', isLoggedIn, async (req, res) => {
    try {
       const origin = req.get('origin')
+      // JWT(Json Web Token)를 생성
       const token = jwt.sign(
          {
-            id: req.user.id,
-            email: req.user.email,
+            id: req.user.id, // 토큰에 포함할 사용자 ID(나중에 토큰을 통해 가져올수 있음)
+            email: req.user.email, // 토큰에 포함할 사용자 이메일(나중에 토큰을 통해 가져올수 있음)
          },
-         process.env.JWT_SECRET,
+         process.env.JWT_SECRET, // 토큰 서명에 사용할 비밀 키 (환경 변수에서 불러옴)
          {
-            expiresIn: '7d', // 30분 = 30m, 1일 = 1d , 기간설정 안할시 평생 토큰 유지
-            issuer: 'shopmaxadmin',
+            expiresIn: '7d', // 토큰 만료 시간 설정: 7일 동안 유효 (예: '30m' = 30분, '1d' = 1일)
+            issuer: 'shopmaxadmin', // 토큰 발급자 정보를 설정 (예: 애플리케이션 이름)
          }
       )
 

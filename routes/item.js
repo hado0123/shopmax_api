@@ -207,14 +207,31 @@ router.get('/', verifyToken, async (req, res) => {
       const searchCategory = req.query.searchCategory || 'itemNm'
       const sellCategory = req.query.sellCategory // 'SELL' 또는 'SOLD_OUT'만 존재
 
+      /*
+      앞에 ...(스프레드 연산자)가 붙은 이유는 조건적으로 객체의 속성을 추가하기 위해서.
+
+      1. 조건 && 객체
+          => searchTerm이 존재하면 객체를 반환
+          => searchTerm이 빈문자열이면 false 또는 "" (falsy 값 자체)를 반환
+
+      2. 스프레드 연산자 (...)
+         스프레드 연산자는 "", false, 0, null, undefined(falsy 값) 무시
+         조건이 참일 때 반환된 객체를 상위 객체에 펼쳐서 추가
+
+     => 결론: 스프레드 연산자는 빈문자열을 무시하기 때문에 searchTerm이 빈문자열이면 
+              whereClause에 searchTerm 객체는 추가되지 않음
+      */
+
+      // 조건부 where 절을 구성하기 위한 객체
       const whereClause = {
+         // searchTerm이 존재하면, 해당 검색어(searchTerm)가 포함된 검색 범주(searchCategory)를 조건으로 추가
          ...(searchTerm && {
             [searchCategory]: {
-               [Op.like]: `%${searchTerm}%`,
+               [Op.like]: `%${searchTerm}%`, // SQL LIKE 연산자를 사용하여 검색어와 일치하는 항목 검색
             },
          }),
+         // sellCategory가 존재하면, itemSellStatus가 해당 판매 상태(sellCategory)와 일치하는 항목을 조건으로 추가
          ...(sellCategory && {
-            // SELL 또는 SOLD_OUT일 경우에만 조건 추가
             itemSellStatus: sellCategory,
          }),
       }
