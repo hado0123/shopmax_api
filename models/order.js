@@ -28,6 +28,7 @@ module.exports = class Order extends Sequelize.Model {
 
    static associate(db) {
       Order.belongsTo(db.User, { foreignKey: 'userId', targetKey: 'id', onDelete: 'CASCADE' })
+
       Order.hasMany(db.OrderItem, { foreignKey: 'orderId', sourceKey: 'id', onDelete: 'CASCADE' })
       Order.belongsToMany(db.Item, { through: db.OrderItem, foreignKey: 'orderId', otherKey: 'itemId' }) // 교차테이블 관계 설정(꼭 필요한건 아님, 다만 다대다 관계쉽게 조회 가능)
       /*

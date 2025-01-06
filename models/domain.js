@@ -16,14 +16,17 @@ module.exports = class Domain extends Sequelize.Model {
          {
             sequelize,
             timestamps: true,
-            paranoid: true,
+            underscored: false,
             modelName: 'Domain',
             tableName: 'domains',
+            paranoid: true,
+            charset: 'utf8mb4',
+            collate: 'utf8mb4_general_ci',
          }
       )
    }
 
    static associate(db) {
-      db.Domain.belongsTo(db.User, { foreignKey: 'userId', targetKey: 'id', onDelete: 'CASCADE' })
+      Domain.belongsTo(db.User, { foreignKey: 'userId', targetKey: 'id', onDelete: 'CASCADE' })
    }
 }
