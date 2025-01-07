@@ -18,7 +18,7 @@ router.get('/get', isLoggedIn, async (req, res) => {
          },
          process.env.JWT_SECRET, // 토큰 서명에 사용할 비밀 키 (환경 변수에서 불러옴)
          {
-            expiresIn: '7d', // 토큰 만료 시간 설정: 7일 동안 유효 (예: '30m' = 30분, '1d' = 1일)
+            expiresIn: '1y', // 토큰 만료 시간 설정: 7일 동안 유효 (예: '30m' = 30분, '1d' = 1일, '1y' = 1년)
             issuer: 'shopmaxadmin', // 토큰 발급자 정보를 설정 (예: 애플리케이션 이름)
          }
       )
