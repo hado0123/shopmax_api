@@ -55,6 +55,36 @@ router.post('/', verifyToken, isAdmin, upload.array('img'), async (req, res) => 
          itemSellStatus,
       })
 
+      /*
+         Promise.all은 병렬로 여러 개의 비동기 작업을 수행할 때 적합하지만, await Img.bulkCreate(images)는 단일 작업으로, Promise.all을 사용하지 않아도 충분히 효율적입니다. bulkCreate 메서드는 내부적으로 효율적으로 데이터를 한 번에 처리하기 때문입니다.
+
+         그러나 req.files.map 안에서 개별적으로 이미지를 저장하거나 추가적인 비동기 작업을 수행해야 한다면 Promise.all이 유용할 수 있습니다. 예를 들어, 파일 경로를 저장하기 전에 비동기 작업(예: 파일 검증, 데이터베이스 조회 등)이 필요하다면, 아래와 같이 작성할 수 있습니다:
+
+         // 이미지 저장
+         const images = await Promise.all(
+            req.files.map(async (file) => {
+               // 비동기 작업이 필요할 경우 처리
+               const isValid = await validateImage(file); // 예: 이미지 검증 함수
+               if (!isValid) throw new Error('Invalid image');
+               
+               return {
+                  oriImgName: file.originalname,
+                  imgUrl: `/${file.filename}`,
+                  repImgYn: 'N', // 기본적으로 'N' 설정
+                  itemId: item.id, // 생성된 상품 ID 연결
+               };
+            })
+         );
+
+         // 첫 번째 이미지는 대표 이미지로 설정
+         if (images.length > 0) {
+            images[0].repImgYn = 'Y';
+         }
+
+         // 이미지 생성
+         await Img.bulkCreate(images);
+      */
+
       // 이미지 저장
       const images = req.files.map((file) => ({
          oriImgName: file.originalname,
