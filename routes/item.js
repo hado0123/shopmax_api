@@ -235,7 +235,7 @@ router.get('/', verifyToken, async (req, res) => {
       const offset = (page - 1) * limit
       const searchTerm = req.query.searchTerm || ''
       const searchCategory = req.query.searchCategory || 'itemNm'
-      const sellCategory = req.query.sellCategory // 'SELL' 또는 'SOLD_OUT'만 존재
+      const sellCategory = req.query.sellCategory || 'SELL' // 'SELL' 또는 'SOLD_OUT'만 존재
 
       /*
       앞에 ...(스프레드 연산자)가 붙은 이유는 조건적으로 객체의 속성을 추가하기 위해서.
