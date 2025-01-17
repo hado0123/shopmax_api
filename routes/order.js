@@ -35,17 +35,18 @@ router.post('/', verifyToken, isLoggedIn, async (req, res) => {
       let totalOrderPrice = 0
 
       /*
-         await Promise.all(...)은 비동기 작업들을 *병렬로 실행하여 성능을 최적화하기 위해 사용. 
-         여기서는 items.map을 통해 각 item에 대해 비동기적으로 처리하고 있으며, 
-         각 비동기 작업(즉, 상품 확인, 재고 차감, 저장 등)을 병렬로 실행한 뒤 
-         모든 작업이 완료될 때까지 기다리기 위해 Promise.all이 사용됨 
-
-         *병렬 실행: 여러작업이 동시에 실행된다. 즉, 비동기 병렬 실행은: 비순차적으로 동시에 실행됨을 의미
+         Promise.all(...): 비동기 작업들을 병렬실행(여러작업을 동시 실행)을 통해 성능을 최적화 한다.
          
-         아래와 같이 처리하면 잘못된건 아니지만 비효율적이다.
-         for (const item of items) {
-             const product = await Item.findByPk(item.itemId, { transaction });
-             ...
+         각 비동기 작업 async (item) => { .. } 을 병렬로 실행한다.
+         아래와 같이 for문을 이용해 처리하는 것은 성능상 효율적이지 X
+         다만, 단순하게 findByPk만 한다면 아래와 같이 처리해도 괜찮음
+         하지만 상품확인, 재고차감, 재고 update 와 같은 여러가지 일을 처리할 경우
+         비동기 + 병렬 처리 방식을 추천
+
+         for(const item of items) {
+            const product = await Item.findByPk(item.itemId, { transaction })
+            ...
+            ...
          }
       */
       // 주문 상품 처리
@@ -106,7 +107,12 @@ router.get('/list', verifyToken, isLoggedIn, async (req, res) => {
       const endDate = req.query.endDate
       const endDateTime = `${endDate} 23:59:59` // 년월일만 받을 시 시분초는 00:00:00로 오므로 시간 변경
 
-      const count = await Order.count({ where: { userId: req.user.id, ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDateTime] } } : {}) } })
+      const count = await Order.count({
+         where: {
+            userId: req.user.id,
+            ...(startDate && endDate ? { createdAt: { [Op.between]: [startDate, endDateTime] } } : {}),
+         },
+      })
 
       // 로그인한 사람의 주문 상품 목록 가져오기
       const orders = await Order.findAll({

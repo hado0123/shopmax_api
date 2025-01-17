@@ -60,7 +60,7 @@ exports.isAdmin = (req, res, next) => {
 // 토큰 유효성 확인
 exports.verifyToken = (req, res, next) => {
    try {
-      // console.log('req.headers.authorization:', req.headers.authorization)
+      console.log('req.headers.authorization:', req.headers.authorization)
       req.decoded = jwt.verify(req.headers.authorization, process.env.JWT_SECRET) // 토큰 검증
       return next()
    } catch (error) {
