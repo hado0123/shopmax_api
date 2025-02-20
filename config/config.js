@@ -16,19 +16,19 @@ module.exports = {
       timezone: '+09:00', // KST로 설정
    },
    test: {
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      host: process.env.DB_HOST,
-      dialect: process.env.DB_DIALECT,
+      username: process.env.TEST_DB_HOST,
+      password: process.env.TEST_DB_USERNAME,
+      database: process.env.TEST_DB_PASSWORD,
+      host: process.env.TEST_DB_NAME,
+      dialect: process.env.TEST_DB_DIALECT,
       timezone: '+09:00', // KST로 설정
    },
    production: {
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      host: process.env.DB_HOST,
-      dialect: process.env.DB_DIALECT,
+      username: process.env.DEPLOY_DB_HOST,
+      password: process.env.DEPLOY_DB_USERNAME,
+      database: process.env.DEPLOY_DB_PASSWORD,
+      host: process.env.DEPLOY_DB_NAME,
+      dialect: process.env.DEPLOY_DB_DIALECT,
       timezone: '+09:00', // KST로 설정
    },
 }
