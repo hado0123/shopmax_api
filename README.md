@@ -1,0 +1,1 @@
+# shopmax_api
