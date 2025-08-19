@@ -2,7 +2,7 @@ const express = require('express')
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
-const { Op } = require('sequelize')
+const { Op, fn, col } = require('sequelize')
 const { Item, Img } = require('../models')
 const { isAdmin } = require('./middlewares')
 const router = express.Router()
@@ -455,6 +455,36 @@ router.put('/:id', isAdmin, upload.array('img'), async (req, res, next) => {
    } catch (error) {
       error.status = 500
       error.message = '상품 수정 중 오류가 발생했습니다.'
+      next(error)
+   }
+})
+
+router.post('/recommend', async (req, res, next) => {
+   try {
+      const items = req.body
+      const ids = items.map((x) => x.id)
+      //  const recommendItems = await Item.findAll({ where: { id: ids } });
+      const recommendItems = await Item.findAll({
+         where: { id: { [Op.in]: ids } },
+         include: [
+            {
+               model: Img,
+               attributes: ['id', 'oriImgName', 'imgUrl', 'repImgYn'],
+               where: { repImgYn: 'Y' },
+            },
+         ],
+         order: [[fn('FIELD', col('Item.id'), ...ids), 'ASC']], // id 순서 그대로
+         distinct: true, // 중복 로우 방지(조인 시)
+      })
+
+      res.json({
+         success: true,
+         message: '추천 상품 조회 성공',
+         recommendItems,
+      })
+   } catch (error) {
+      error.status = 500
+      error.message = '추천 상품을 불러오는 중 오류가 발생했습니다.'
       next(error)
    }
 })

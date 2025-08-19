@@ -377,4 +377,41 @@ router.delete('/delete/:id', isLoggedIn, async (req, res, next) => {
    }
 })
 
+// 주문 목록(차트용) localhost:8000/order/chartlist
+router.get('/chartlist', async (req, res, next) => {
+   try {
+      const orders = await OrderItem.findAll({
+         // flat(평평하다) 형태로 컬럼값 가져오기: col + include attributes 빈배열 + raw값 true
+         // 하나의 객체에 합쳐서 가져온다
+         attributes: ['orderId', 'itemId', 'count', 'orderPrice', [col('Item.itemNm'), 'itemNm'], [col('Item.price'), 'price']],
+         include: [
+            {
+               model: Item,
+               attributes: [],
+            },
+         ],
+         raw: true,
+      })
+
+      // const orders = await OrderItem.findAll({
+      //    include: [
+      //       {
+      //          model: Item,
+      //          attributes: ['id', 'itemNm', 'price'],
+      //       },
+      //    ],
+      // })
+
+      res.json({
+         success: true,
+         message: '주문 목록 조회 성공',
+         orders,
+      })
+   } catch (error) {
+      error.status = 500
+      error.message = '주문 내역을 불러오는 중 오류가 발생했습니다.'
+      next(error)
+   }
+})
+
 module.exports = router
