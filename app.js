@@ -26,7 +26,7 @@ app.set('port', process.env.PORT || 8002)
 
 // 시퀄라이즈를 사용한 DB연결
 sequelize
-   .sync({ force: false })
+   .sync({ force: false, alter: false })
    .then(() => {
       console.log('데이터베이스 연결 성공') //연결 성공시
    })
