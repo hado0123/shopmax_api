@@ -2,42 +2,11 @@ const express = require('express')
 const router = express.Router()
 const { sequelize } = require('../models')
 const { Order, Item, User, OrderItem, Img } = require('../models')
-const { isLoggedIn } = require('./middlewares')
-const { Op } = require('sequelize')
+const { isLoggedIn, verifyToken } = require('./middlewares')
+const { Op, col } = require('sequelize')
 
-/**
- * @swagger
- * /order:
- *   post:
- *     summary: 주문 생성
- *     tags: [Order]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               items:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     itemId:
- *                       type: integer
- *                       description: 주문 상품 id
- *                     count:
- *                       type: integer
- *                       description: 주문 수량
- *     responses:
- *       201:
- *         description: 주문 생성 성공
- *       404:
- *         description: 회원 찾기 실패
- *       500:
- *         description: 서버 오류
- */
-router.post('/', isLoggedIn, async (req, res, next) => {
+// 주문 localhost:8000/order
+router.post('/', verifyToken, isLoggedIn, async (req, res, next) => {
    try {
       /*
         ★트랜잭션 처리: 주문 처리 중 에러 발생시 차감된 재고를 복구하지 않으면 데이터가 불일치 상태가 되므로 트랜잭션 처리
@@ -156,42 +125,9 @@ router.post('/', isLoggedIn, async (req, res, next) => {
    }
 })
 
-/**
- * @swagger
- * /order/list:
- *   get:
- *     summary: 주문 목록 조회(페이징 및 날짜 검색)
- *     tags: [Order]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: 페이지 번호
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: 페이지당 항목 수
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date
- *         description: 시작 날짜
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date
- *         description: 종료 날짜
- *     responses:
- *         200:
- *          description: 주문 목록 조회 성공
- *         500:
- *          description: 서버 오류
- */
-router.get('/list', isLoggedIn, async (req, res, next) => {
+// localhost:8000/order/list?page=1&limit=5&startDate=2025-01-01&endDate=2025-01-16
+// 주문 목록(페이징, 날짜 검색)
+router.get('/list', verifyToken, isLoggedIn, async (req, res, next) => {
    try {
       const page = parseInt(req.query.page, 10) || 1
       const limit = parseInt(req.query.limit, 10) || 5
@@ -252,30 +188,8 @@ router.get('/list', isLoggedIn, async (req, res, next) => {
    }
 })
 
-/**
- * @swagger
- * /order/cancel/{id}:
- *   post:
- *     summary: 주문 취소
- *     tags: [Order]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: 주문 ID
- *     responses:
- *       200:
- *         description: 주문 취소 성공
- *       404:
- *         description: 주문 없음
- *       400:
- *         description: 이미 취소된 주문
- *       500:
- *         description: 서버 오류
- */
-router.post('/cancel/:id', isLoggedIn, async (req, res, next) => {
+// 주문 취소 localhost:8000/order/cancel/:id
+router.post('/cancel/:id', verifyToken, isLoggedIn, async (req, res, next) => {
    try {
       const transaction = await sequelize.transaction()
 
@@ -329,28 +243,8 @@ router.post('/cancel/:id', isLoggedIn, async (req, res, next) => {
    }
 })
 
-/**
- * @swagger
- * /order/delete/{id}:
- *   delete:
- *     summary: 주문 삭제
- *     tags: [Order]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: 주문 id
- *     responses:
- *       200:
- *         description: 주문 삭제 성공
- *       404:
- *         description: 주문 내역 없음
- *       500:
- *         description: 서버 오류
- */
-router.delete('/delete/:id', isLoggedIn, async (req, res, next) => {
+// 주문 삭제 localhost:8000/order/delete/:id
+router.delete('/delete/:id', verifyToken, isLoggedIn, async (req, res, next) => {
    try {
       const id = req.params.id // order id
 
@@ -373,6 +267,43 @@ router.delete('/delete/:id', isLoggedIn, async (req, res, next) => {
    } catch (error) {
       error.status = 500
       error.message = '주문 삭제 중 오류가 발생했습니다.'
+      next(error)
+   }
+})
+
+// 주문 목록(차트용) localhost:8000/order/chartlist
+router.get('/chartlist', async (req, res, next) => {
+   try {
+      const orders = await OrderItem.findAll({
+         // flat(평평하다) 형태로 컬럼값 가져오기: col + include attributes 빈배열 + raw값 true
+         // 하나의 객체에 합쳐서 가져온다
+         attributes: ['orderId', 'itemId', 'count', 'orderPrice', [col('Item.itemNm'), 'itemNm'], [col('Item.price'), 'price']],
+         include: [
+            {
+               model: Item,
+               attributes: [],
+            },
+         ],
+         raw: true,
+      })
+
+      // const orders = await OrderItem.findAll({
+      //    include: [
+      //       {
+      //          model: Item,
+      //          attributes: ['id', 'itemNm', 'price'],
+      //       },
+      //    ],
+      // })
+
+      res.json({
+         success: true,
+         message: '주문 목록 조회 성공',
+         orders,
+      })
+   } catch (error) {
+      error.status = 500
+      error.message = '주문 내역을 불러오는 중 오류가 발생했습니다.'
       next(error)
    }
 })

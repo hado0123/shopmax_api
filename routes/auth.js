@@ -2,11 +2,48 @@ const express = require('express')
 const bcrypt = require('bcrypt')
 const passport = require('passport')
 const User = require('../models/user')
-const { isLoggedIn, isNotLoggedIn } = require('../routes/middlewares')
+const { isLoggedIn, isNotLoggedIn } = require('./middlewares')
 
 const router = express.Router()
 
-// 회원가입 localhost:8000/auth/join
+/**
+ * @swagger
+ * /auth/join:
+ *   post:
+ *     summary: 사용자 회원가입
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - name
+ *               - address
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: 이메일
+ *               name:
+ *                 type: string
+ *                 description: 이름
+ *               address:
+ *                 type: string
+ *                 description: 주소
+ *               password:
+ *                 type: string
+ *                 description: 비밀번호
+ *     responses:
+ *       201:
+ *         description: 회원가입 성공
+ *       409:
+ *         description: 이미 존재하는 사용자
+ *       500:
+ *         description: 서버 오류
+ */
 router.post('/join', isNotLoggedIn, async (req, res, next) => {
    try {
       const { email, name, address, password } = req.body
@@ -55,7 +92,36 @@ router.post('/join', isNotLoggedIn, async (req, res, next) => {
    }
 })
 
-// 로그인 localhost:8000/auth/login
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: 사용자 로그인
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: 이메일
+ *               password:
+ *                 type: string
+ *                 description: 비밀번호
+ *     responses:
+ *       200:
+ *         description: 로그인 성공
+ *       401:
+ *         description: 인증 실패
+ *       500:
+ *         description: 서버 오류
+ */
 router.post('/login', isNotLoggedIn, async (req, res, next) => {
    passport.authenticate('local', (authError, user, info) => {
       if (authError) {
@@ -97,7 +163,18 @@ router.post('/login', isNotLoggedIn, async (req, res, next) => {
    })(req, res, next)
 })
 
-// 로그아웃 localhost:8000/auth/logout
+/**
+ * @swagger
+ * /auth/logout:
+ *   get:
+ *     summary: 사용자 로그아웃
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: 로그아웃 성공
+ *       500:
+ *         description: 로그아웃 오류
+ */
 router.get('/logout', isLoggedIn, async (req, res, next) => {
    req.logout((logoutError) => {
       if (logoutError) {
@@ -116,7 +193,18 @@ router.get('/logout', isLoggedIn, async (req, res, next) => {
    })
 })
 
-// 로그인 상태확인 localhost:8000/auth/status
+/**
+ * @swagger
+ * /auth/status:
+ *   get:
+ *     summary: 로그인 상태 확인
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: 로그인 여부 및 사용자 정보
+ *       500:
+ *         description: 서버 오류
+ */
 router.get('/status', async (req, res, next) => {
    try {
       if (req.isAuthenticated()) {

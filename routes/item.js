@@ -4,7 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const { Op } = require('sequelize')
 const { Item, Img } = require('../models')
-const { isAdmin, verifyToken } = require('./middlewares')
+const { isAdmin } = require('./middlewares')
 const router = express.Router()
 
 // uploads 폴더가 없을 경우 새로 생성
@@ -37,8 +37,51 @@ const upload = multer({
    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB로 제한
 })
 
-// 상품등록 localhost:8000/item/
-router.post('/', verifyToken, isAdmin, upload.array('img'), async (req, res, next) => {
+/**
+ * @swagger
+ * /item:
+ *   post:
+ *     summary: 상품 등록
+ *     tags: [Item]
+ *     consumes:
+ *       - multipart/form-data
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               itemNm:
+ *                 type: string
+ *                 description: 상품명
+ *               price:
+ *                 type: number
+ *                 description: 가격
+ *               stockNumber:
+ *                 type: integer
+ *                 description: 재고
+ *               itemDetail:
+ *                 type: string
+ *                 description: 상품 상세 설명
+ *               itemSellStatus:
+ *                 type: string
+ *                 description: 판매상태(SELL, SOLD_OUT)
+ *               img:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: 업로드 이미지 파일 목록(최대 5개)
+ *     responses:
+ *       201:
+ *         description: 상품 등록 성공
+ *       400:
+ *         description: 파일 업로드 실패
+ *       500:
+ *         description: 서버 오류
+ */
+router.post('/', isAdmin, upload.array('img'), async (req, res, next) => {
    try {
       // 업로드된 파일 확인
       if (!req.files) {
@@ -95,12 +138,45 @@ router.post('/', verifyToken, isAdmin, upload.array('img'), async (req, res, nex
    }
 })
 
-// localhost:8000/item?page=1&limit=3&sellCategory=SELL&searchTerm=가방&searchCategory=itemNm => 판매중인 상품 중에서 상품명 '가방 '으로 검색
-
-// localhost:8000/item?page=1&limit=3&sellCategory=SOLD_OUT&searchTerm=가방&searchCategory=itemDetail => 품절된 상품 중에서 상품설명 '가방'으로 검색
-
-// 전체 상품 불러오기(페이징, 검색 기능)
-router.get('/', verifyToken, async (req, res, next) => {
+/**
+ * @swagger
+ * /item:
+ *   get:
+ *     summary: 전체 상품 목록 조회 (검색 및 페이징 가능)
+ *     tags: [Item]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: 페이지 번호
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: 페이지당 항목 수
+ *       - in: query
+ *         name: searchTerm
+ *         schema:
+ *           type: string
+ *         description: 검색어
+ *       - in: query
+ *         name: searchCategory
+ *         schema:
+ *           type: string
+ *         description: 검색 범주 (itemNm, itemDetail)
+ *       - in: query
+ *         name: sellCategory
+ *         schema:
+ *           type: string
+ *         description: 판매 상태 (SELL, SOLD_OUT)
+ *     responses:
+ *       200:
+ *         description: 상품 목록 조회 성공
+ *       500:
+ *         description: 서버 오류
+ */
+router.get('/', async (req, res, next) => {
    try {
       const page = parseInt(req.query.page, 10) || 1
       const limit = parseInt(req.query.limit, 10) || 5
@@ -177,8 +253,28 @@ router.get('/', verifyToken, async (req, res, next) => {
    }
 })
 
-// 상품 삭제 localhost:8000/item/:id
-router.delete('/:id', verifyToken, isAdmin, async (req, res, next) => {
+/**
+ * @swagger
+ * /item/{id}:
+ *   delete:
+ *     summary: 상품 삭제
+ *     tags: [Item]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 상품 ID
+ *     responses:
+ *       200:
+ *         description: 상품 삭제 성공
+ *       404:
+ *         description: 상품을 찾을 수 없음
+ *       500:
+ *         description: 서버 오류
+ */
+router.delete('/:id', isAdmin, async (req, res, next) => {
    try {
       const id = req.params.id // 상품 id
 
@@ -206,8 +302,28 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res, next) => {
    }
 })
 
-// 특정 상품 불러오기 localhost:8000/item/:id
-router.get('/:id', verifyToken, async (req, res, next) => {
+/**
+ * @swagger
+ * /item/{id}:
+ *   get:
+ *     summary: 특정 상품 조회
+ *     tags: [Item]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 상품 ID
+ *     responses:
+ *       200:
+ *         description: 상품 조회 성공
+ *       404:
+ *         description: 상품을 찾을 수 없음
+ *       500:
+ *         description: 서버 오류
+ */
+router.get('/:id', async (req, res, next) => {
    try {
       const id = req.params.id
 
@@ -239,8 +355,58 @@ router.get('/:id', verifyToken, async (req, res, next) => {
    }
 })
 
-// 상품 수정 localhost:8000/item/:id
-router.put('/:id', verifyToken, isAdmin, upload.array('img'), async (req, res, next) => {
+/**
+ * @swagger
+ * /item/{id}:
+ *   put:
+ *     summary: 상품 수정
+ *     tags: [Item]
+ *     consumes:
+ *       - multipart/form-data
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 상품 id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               itemNm:
+ *                 type: string
+ *                 description: 상품명
+ *               price:
+ *                 type: number
+ *                 description: 가격
+ *               stockNumber:
+ *                 type: integer
+ *                 description: 재고
+ *               itemDetail:
+ *                 type: string
+ *                 description: 상품 상세 설명
+ *               itemSellStatus:
+ *                 type: string
+ *                 description: 판매상태(SELL, SOLD_OUT)
+ *               img:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: 업로드 이미지 파일 목록(최대 5개)
+ *     responses:
+ *       201:
+ *         description: 상품 등록 성공
+ *       400:
+ *         description: 파일 업로드 실패
+ *       500:
+ *         description: 서버 오류
+ */
+router.put('/:id', isAdmin, upload.array('img'), async (req, res, next) => {
    try {
       const id = req.params.id
       const { itemNm, price, stockNumber, itemDetail, itemSellStatus } = req.body
